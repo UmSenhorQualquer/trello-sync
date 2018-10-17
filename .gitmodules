@@ -1,3 +1,6 @@
 [submodule "py-trello"]
 	path = py-trello
 	url = https://github.com/sarumont/py-trello.git
+[submodule "python-bitbucket"]
+	path = python-bitbucket
+	url = https://github.com/Alir3z4/python-bitbucket.git
