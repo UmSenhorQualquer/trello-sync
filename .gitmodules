@@ -1,0 +1,6 @@
+[submodule "py-trello"]
+	path = py-trello
+	url = https://github.com/sarumont/py-trello.git
+[submodule "BitBucket-api"]
+	path = BitBucket-api
+	url = https://github.com/Sheeprider/BitBucket-api.git
