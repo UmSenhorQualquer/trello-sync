@@ -4,3 +4,6 @@
 [submodule "python-bitbucket"]
 	path = python-bitbucket
 	url = https://github.com/Alir3z4/python-bitbucket.git
+[submodule "PyGithub"]
+	path = PyGithub
+	url = https://github.com/PyGithub/PyGithub.git
