@@ -177,6 +177,7 @@ class TrelloMasterBoard(object):
 
 
         for card_id, card in mboard_cardsids.items():
+            print(card.plugin_data)
             labels = card.labels if card.labels else []
             for label in labels:
                 board    = boards.get(label.name.lower(), None)
@@ -196,7 +197,7 @@ if __name__=='__main__':
 
     p = TrelloMasterBoard(
         'MASTER',
-        ['PYBPOD', 'CORE', 'IDTRACKER.AI', 'VIDEO ANNOTATOR', 'HUGO CACHITAS', 'RICARDO RIBEIRO', 'Bauto', 'PYFORMS'],
+        ['PYBPOD', 'CORE', 'IDTRACKER.AI', 'VIDEO ANNOTATOR', 'HUGO CACHITAS', 'RICARDO RIBEIRO', 'BAÚTO', 'PYFORMS'],
         ['BACKLOG', 'TODO', 'WORKING ON', 'DONE']
     )
 
