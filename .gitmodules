@@ -7,3 +7,6 @@
 [submodule "PyGithub"]
 	path = PyGithub
 	url = https://github.com/PyGithub/PyGithub.git
+[submodule "pyforms-web"]
+	path = pyforms-web
+	url = https://github.com/UmSenhorQualquer/pyforms-web.git
