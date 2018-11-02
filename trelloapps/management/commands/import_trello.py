@@ -13,7 +13,5 @@ class Command(BaseCommand):
         
         trello = TrelloClient(settings.TRELLO_API_KEY, settings.TRELLO_TOKEN)
 
-        Board.import_board(trello, settings.TRELLO_MASTER)
-        
-        for board_name in settings.TRELLO_BOARDS:
-        	Board.import_board(trello, board_name)
+        for board in Board.objects.all().order_by('pk'):
+        	board.import_board(trello)

@@ -10,48 +10,17 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         pass
 
-    def create_projects_labels(self, trello, board, master=None):
-        """
-        Make sure the board has all the project labels
-        """
-        for proj in Project.objects.all():
-            try:
-                label = Label.objects.get(board=board, name=proj.name)
-            except Label.DoesNotExist:
-                b    = trello.get_board(board.remoteid)
-                lbls = b.get_labels(limit=100)
-                l   = None
-                for lbl in lbls:
-                    if lbl.name==proj.name:
-                        l = lbl 
-                        break
-                if l is None: l = b.add_label(proj.name, 'red')
-
-                if master is not None:
-                    masterlabel = Label.objects.get(board=master, name=proj.name)
-                else:
-                    masterlabel = None
-
-                label = Label(name=l.name, remoteid=l.id, board=board, parent=masterlabel)
-                label.save()
-
-
+    
 
     def handle(self, *args, **options):
         trello = TrelloClient(settings.TRELLO_API_KEY, settings.TRELLO_TOKEN)
         master = Board.objects.get(name=settings.TRELLO_MASTER)
-
-        # Create the labels to the master board
-        self.create_projects_labels(trello, master)
-
-        # Create the labels to the users boards 
-        for member in Member.objects.all():
-            if member.memberboard is not None:
-                self.create_projects_labels(trello, member.memberboard, master)
         
         # SYNC ALL CARDS TO MASTER
         for card in Card.objects.exclude(boardlist__board=master):
             board  = card.boardlist.board
+
+            # get the master label for the card board.
             try:
                 label = Label.objects.get(board=master, name=board.name)
             except Label.DoesNotExist:
@@ -64,7 +33,7 @@ class Command(BaseCommand):
                     card.name, 
                     desc=card.desc, 
                     labels=[label.remote_object(trello)] if label else None, 
-                    assign=[board.member.remoteid] if board.member else None,
+                    assign=[board.member.remote_object(trello)] if board.member else None,
                 )
                 c.set_closed(card.closed)
 
@@ -80,10 +49,12 @@ class Command(BaseCommand):
                 card.parent = mastercard
                 card.save()
 
-                mastercard.members.add(board.member)
+                if board.member:
+                    mastercard.members.add(board.member)
 
+                # search for cards in other boards with the same name
                 for tmp in Card.objects.exclude(
-                    boardlist__board=master).filter(
+                    boardlist__board__in=[master,board]).filter(
                     name=card.name, parent=None):
                     tmp.parent = mastercard
                     
