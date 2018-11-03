@@ -3,7 +3,7 @@ from django.db import models
 class Card(models.Model):
     
     name     = models.TextField('Name')
-    remoteid = models.CharField(max_length=30)
+    remoteid = models.CharField(max_length=30, unique=True)
     desc     = models.TextField('Description', null=True)
     position = models.IntegerField('Position', null=True)
     closed   = models.BooleanField('Closed', null=True)
