@@ -22,8 +22,9 @@ class BoardList(models.Model):
         # GET ONLY THE LATEST UPDATES
         if self.board.last_activity:
             query = {'since': self.board.last_activity.isoformat( timespec='microseconds')}
-            data  = lst.list_actions(query)
-            ids   = []
+            
+            data = lst.client.fetch_json('/lists/' + lst.id + '/actions', query_params=query)
+            ids  = []
             for update in data:
                 card_info = update['data'].get('card', None)
                 if card_info: ids.append(card_info['id'])
