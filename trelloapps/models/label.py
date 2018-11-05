@@ -13,3 +13,6 @@ class Label(models.Model):
 
     def remote_object(self, trello):
         return trello.get_label(self.remoteid, self.board.remoteid)
+
+    def __str__(self):
+        return "{0}:{1}".format(self.name, self.remoteid)

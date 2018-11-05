@@ -20,22 +20,14 @@ class BoardList(models.Model):
         return trello.get_list(self.remoteid)
 
     def import_cards(self, lst):
+        """
+        Import all the boards in the list
+        """
         from trelloapps.models import Card
         from trelloapps.models import Member
 
-        # GET ONLY THE LATEST UPDATES
-        if self.board.last_activity:
-            query = {'since': self.board.last_activity.isoformat( timespec='microseconds')}
-            
-            data = lst.client.fetch_json('/lists/' + lst.id + '/actions', query_params=query)
-            ids  = []
-            for update in data:
-                card_info = update['data'].get('card', None)
-                if card_info: ids.append(card_info['id'])
-            cards = [lst.client.get_card(i) for i in list(set(ids))]
-        else:
-            cards = lst.list_cards(card_filter='all')
-       
+        cards = lst.list_cards(card_filter='all')
+        
         # UPDATE THE CARDS INFO #####
         for c in cards:
             try:
@@ -59,7 +51,6 @@ class BoardList(models.Model):
                     m = lst.client.get_member(mid)
                     member = Member(remoteid=m.id, name=m.username)
                     member.save()
-                card.members.add(member)
-                
+                card.members.add(member)    
 
            
