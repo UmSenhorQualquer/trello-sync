@@ -23,6 +23,13 @@ class Card(models.Model):
 
     parent = models.ForeignKey('Card', on_delete=models.CASCADE, null=True, blank=True)
 
+    def __str__(self):
+        return "{board} > {list} > ({pk}) {name}".format(
+            board=self.boardlist.board.name, 
+            list=self.boardlist.name, 
+            name=self.name, 
+            pk=self.pk
+        )
 
     def remote_object(self, trello):
         return trello.get_card(self.remoteid)

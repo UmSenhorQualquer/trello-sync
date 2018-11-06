@@ -22,6 +22,7 @@ class Command(BaseCommand):
         updatedcards_ids = []
 
         for board in Board.objects.all().order_by('pk'):
+
             logger.info( 'Importing board {0}'.format(board.name) )
 
             # search for the remote board
@@ -29,14 +30,12 @@ class Command(BaseCommand):
 
             # check if the board was updated since the last update
             if board.last_activity is not None and b.date_last_activity<=board.last_activity:
-                logger.info( 'No activity detected' )
-                continue
-
-            board.last_activity = b.date_last_activity
-            board.save()
-
-            # If is the first update then import all the lists from the board.
+                logger.info( '    - No activity detected' )
+            
+            # If it is the first update then import all the lists from the board.
             if not board.last_activity:
+                logger.info("*** FIRST IMPORT ***")
+                            
                 for lst in board.boardlist_set.all():
                     l = lst.remote_object(trello)
                     lst.name     = l.name
@@ -76,22 +75,30 @@ class Command(BaseCommand):
                             # append to the list all the modified cards ids
                             updatedcards_ids.append(card_id)
 
-                if master==board:
-                    for c in b.open_cards():
-                        try:
-                            card = Card.objects.get(remoteid=c.id)
-                            if card.last_activity<c.date_last_activity:
-                                updatedcards_ids.append(c.id)
+            board.last_activity = b.date_last_activity
+            board.save()
 
-                        except Card.DoesNotExist:
-                            pass
+
+
+        cards = []
+        
+        # search in all the cards from the master board,
+        # which cards were updated
+        b = master.remote_object(trello)
+        for c in b.open_cards():
+            try:
+                card = Card.objects.get(remoteid=c.id)
+                if card.last_activity<c.date_last_activity:
+                    cards.append(c)
+            except Card.DoesNotExist:
+                pass
+
 
         # get all the remote cards.
-        cards = []
         updatedcards_ids = list(set(updatedcards_ids))
         for idx, i in enumerate(updatedcards_ids):
             logger.info("Get remote card ({0}/{1})".format(idx+1, len(updatedcards_ids) )  )
-            cards.append(trello.get_card(i) )
+            cards.append( trello.get_card(i) )
 
         # sort the cards by activity, so the latest card is the one updated
         cards = sorted(cards, key=lambda x: x.date_last_activity)

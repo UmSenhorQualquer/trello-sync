@@ -8,3 +8,6 @@ class Member(models.Model):
     
     def remote_object(self, trello):
         return trello.get_member(self.remoteid)
+
+    def __str__(self):
+    	return self.name
