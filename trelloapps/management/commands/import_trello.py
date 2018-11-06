@@ -49,12 +49,11 @@ class Command(BaseCommand):
                 # if is not the first board update, update only the latest modifications
                 # the board was already imported once
                 query = {'since': board.last_activity.isoformat( timespec='microseconds')}
-                print(query)
                 data  = trello.fetch_json('/boards/' + board.remoteid + '/actions', query_params=query)
 
                 ids   = []
                 for update in data:
-                    print(update)
+                    
                     action_type = update.get('type',None)
                     card_info   = update['data'].get('card', None)
                     date_last_activity = dateparser.parse(update.get('date'))
@@ -76,10 +75,24 @@ class Command(BaseCommand):
                         else:
                             # append to the list all the modified cards ids
                             updatedcards_ids.append(card_id)
-            
+
+                if master==board:
+                    for c in b.open_cards():
+                        try:
+                            card = Card.objects.get(remoteid=c.id)
+                            if card.last_activity<c.date_last_activity:
+                                updatedcards_ids.append(c.id)
+
+                        except Card.DoesNotExist:
+                            pass
 
         # get all the remote cards.
-        cards = [trello.get_card(i) for i in list(set(updatedcards_ids))]
+        cards = []
+        updatedcards_ids = list(set(updatedcards_ids))
+        for idx, i in enumerate(updatedcards_ids):
+            logger.info("Get remote card ({0}/{1})".format(idx+1, len(updatedcards_ids) )  )
+            cards.append(trello.get_card(i) )
+
         # sort the cards by activity, so the latest card is the one updated
         cards = sorted(cards, key=lambda x: x.date_last_activity)
 

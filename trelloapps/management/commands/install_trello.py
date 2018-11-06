@@ -54,7 +54,6 @@ class Command(BaseCommand):
             if master is not None:
                 lst.parent = master.boardlist_set.get(name=lst.name)
 
-            print(lst.name, lst.board)
             lst.save()
 
     def __install_labels(self, b, board, master=None):
@@ -124,9 +123,9 @@ class Command(BaseCommand):
             except Board.DoesNotExist:
                 board = Board(remoteid=b.id)
 
-            board.name = proj_name
-            board.closed = False
-            board.project = prj
+            board.name      = proj_name
+            board.closed    = False
+            board.project   = prj
             board.last_activity = None
             board.save()
 

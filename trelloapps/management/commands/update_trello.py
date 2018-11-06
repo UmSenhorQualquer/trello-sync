@@ -119,17 +119,21 @@ class Command(BaseCommand):
                 Q(update_members=True) | Q(update_labels=True) | Q(update_list=True) | Q(delete_remotely=True)
             ).order_by('last_activity'):
 
+           
+
             try:
                 c = card.remote_object(trello)
             except ResourceUnavailable:
                 logger.error("Card [{1} > {2} > {0}] does not exists remotely".format( card.name, card.boardlist.board.name, card.boardlist.name))  
+                card.delete()
+                logger.info("Delete card [{1} > {2} > {0}]".format( card.name, card.boardlist.board.name, card.boardlist.name))  
                 continue
 
             if card.delete_remotely:
+                logger.error("Delete local and remote card [{1} > {2} > {0}]".format( card.name, card.boardlist.board.name, card.boardlist.name))  
                 c.delete()
                 card.delete()
                 continue
-
 
             if card.update_name:
                 c.set_name(card.name)
@@ -164,13 +168,16 @@ class Command(BaseCommand):
                     logger.info('Unsign member [{3}] for card [{1} > {2} > {0}]'.format(card.name, card.boardlist.board.name, card.boardlist.name, m_id) )
                 card.update_members = False
 
+
+
             if card.update_labels:
                 labels_ids = c.idLabels
+                
                 for label in card.labels.all():
                     if label.remoteid not in labels_ids:
+
                         if label.remoteid not in labels:
                             labels[label.remoteid] = trello.get_label(label.remoteid, card.boardlist.board.remoteid)
-
                         logger.info('Add label [{3}] for card [{1} > {2} > {0}]'.format(card.name, card.boardlist.board.name, card.boardlist.name, labels[label.remoteid].name) )
                         c.add_label(labels[label.remoteid])
                     else:
@@ -190,7 +197,7 @@ class Command(BaseCommand):
 
 
 
-    def calculate_modifications(self, master):
+    def compute_modifications(self, master):
 
         # SYNC ALL CARDS TO MASTER
         # Select to sync all the boards that were not marked to be removed.
@@ -234,6 +241,7 @@ class Command(BaseCommand):
                     for child in card.card_set.all():
                         child.delete_remotely = True
                         child.save()
+                    card.delete()
 
             siblings = Card.objects.filter( Q(parent=card.parent) | Q(pk=card.parent.pk) ) if card.parent else Card.objects.filter( Q(parent=card) | Q(pk=card.pk) )
             siblings = siblings.order_by('-last_activity')
@@ -287,26 +295,47 @@ class Command(BaseCommand):
 
                 # MEMBERS
                 if card.update_members:
-                    cards_to_remove = siblings.exclude(pk=card.pk)
+                    cards_to_remove = siblings.exclude(pk=card.pk).exclude(boardlist__board__member=None)
+                    
                     for member in card.members.all():
                         cards_to_remove = cards_to_remove.exclude(boardlist__board__member=member)
+
                     for c in cards_to_remove:
-                        logger.info("Remove card [{1} > {2} > {0}]".format( c.name, c.boardlist.board.name, c.boardlist.name))
+                        logger.info("[MEMBERS] Remove card [{1} > {2} > {0}]".format( c.name, c.boardlist.board.name, c.boardlist.name))
                         c.delete_remotely = True
                         c.save()
-                
+
+                    for member in card.members.all():
+                        try:
+                            obj = Card.objects.get(boardlist__board__member=member, parent=card)
+                        except Card.DoesNotExist:
+                            blist = BoardList.objects.get(board__member=member, name=card.boardlist.name)
+                            obj = Card(name=card.name, desc=card.desc, closed=card.closed, boardlist=blist, parent=card)
+                            obj.save()
+                            logger.info("[MEMBERS] Created the card [{1} > {2} > {0}]".format( obj.name, obj.boardlist.board.name, obj.boardlist.name))
+                        
                 # LABELS
                 if card.update_labels:
-                    cards_to_remove = siblings.exclude(pk=card.pk)
+                    cards_to_remove = siblings.exclude(pk=card.pk).exclude(boardlist__board__project=None)
+                    cards_to_add    = card.labels.all()
+                    
                     for label in card.labels.all():
-                        prj = Project.objects.get(name=label.name)
-                        cards_to_remove = cards_to_remove.exclude(boardlist__board__project=prj)
+                        cards_to_remove = cards_to_remove.exclude(boardlist__board__name=label.name)
+
                     for c in cards_to_remove:
-                        logger.info("Remove card [{1} > {2} > {0}]".format( c.name, c.boardlist.board.name, c.boardlist.name))
+                        logger.info("[LABELS] Remove card [{1} > {2} > {0}]".format( c.name, c.boardlist.board.name, c.boardlist.name))
                         c.delete_remotely = True
                         c.save()
-                
-        
+                    
+                    for label in card.labels.all():
+                        try:
+                            obj = Card.objects.get(boardlist__board__name=label.name, parent=card)
+                        except Card.DoesNotExist:
+                            blist = BoardList.objects.get(board__project__name=label.name, name=card.boardlist.name)
+                            obj = Card(name=card.name, desc=card.desc, closed=card.closed, boardlist=blist, parent=card)
+                            obj.save()
+                            logger.info("[LABELS] Created the card [{1} > {2} > {0}]".format( obj.name, obj.boardlist.board.name, obj.boardlist.name))
+                        
 
 
     def handle(self, *args, **options):
@@ -315,7 +344,7 @@ class Command(BaseCommand):
 
         
 
-        self.calculate_modifications(master)
+        self.compute_modifications(master)
         self.commit_updates_to_remote(trello, master)
         self.commit_newcards_to_remote(trello, master)
         
